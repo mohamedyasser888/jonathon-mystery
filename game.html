@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Broom Flight</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+      background: linear-gradient(to bottom, #87CEEB, #e0f7ff);
+      font-family: 'Papyrus', fantasy;
+    }
+
+    nav {
+      position: absolute;
+      top: 15px;
+      display: flex;
+      gap: 15px;
+      z-index: 10;
+    }
+
+    nav button {
+      padding: 10px 25px;
+      font-size: 16px;
+      background: #1e90ff;
+      border: none;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+      box-shadow: 0 0 15px #1e90ff;
+    }
+
+    nav button:hover {
+      background: #4682b4;
+      box-shadow: 0 0 25px #4682b4;
+    }
+
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: url('sky-bg.jpg') no-repeat center center;
+      background-size: cover;
+    }
+
+    #startBtn, #winMsg {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      font-size: 28px;
+      text-shadow: 0 0 10px gold;
+      color: gold;
+    }
+
+    #startBtn {
+      top: 50%;
+      background: #1e90ff;
+      border: none;
+      border-radius: 10px;
+      padding: 15px 35px;
+      cursor: pointer;
+      box-shadow: 0 0 20px #1e90ff;
+    }
+
+    #startBtn:hover {
+      background: #4682b4;
+    }
+
+    #winMsg {
+      top: 45%;
+      display: none;
+      font-size: 36px;
+      color: gold;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <button onclick="location.href='mysterybox.html'">Mystery Box</button>
+    <button onclick="location.href='game.html'">Game</button>
+  </nav>
+
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <button id="startBtn">Start Game</button>
+  <div id="winMsg">🎉 Congrats! You won 1 Galleon! 🎉</div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startBtn = document.getElementById('startBtn');
+    const winMsg = document.getElementById('winMsg');
+
+    let broom, pipes, score, gravity, velocity, gameInterval;
+    const pipeGap = 160; // enough space for player
+    const pipeWidth = 70;
+    const pipeSpeed = 2;
+    const flapStrength = -4.5; // weaker flap = smoother control
+    const gravityForce = 0.22; // slower fall = more natural
+
+    function resetGame() {
+      broom = { x: 60, y: 250, width: 40, height: 30 };
+      pipes = [];
+      score = 0;
+      velocity = 0;
+    }
+
+    function drawBroom() {
+      ctx.fillStyle = 'gold';
+      ctx.fillRect(broom.x, broom.y, broom.width, broom.height);
+    }
+
+    function drawPipes() {
+      ctx.fillStyle = '#228B22';
+      pipes.forEach(pipe => {
+        ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
+        ctx.fillRect(pipe.x, pipe.top + pipe.gap, pipe.width, canvas.height - (pipe.top + pipe.gap));
+      });
+    }
+
+    function createPipe() {
+      const minTop = 80;
+      const maxTop = canvas.height - pipeGap - 120;
+      const top = Math.random() * (maxTop - minTop) + minTop;
+      pipes.push({ x: canvas.width, top, width: pipeWidth, gap: pipeGap, counted: false });
+    }
+
+    function updateGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      velocity += gravityForce;
+      broom.y += velocity;
+
+      // ground or ceiling collision
+      if (broom.y + broom.height > canvas.height || broom.y < 0) endGame();
+
+      // pipe creation
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < 200) createPipe();
+
+      pipes.forEach(pipe => {
+        pipe.x -= pipeSpeed;
+
+        // collision detection
+        if (
+          broom.x < pipe.x + pipe.width &&
+          broom.x + broom.width > pipe.x &&
+          (broom.y < pipe.top || broom.y + broom.height > pipe.top + pipe.gap)
+        ) {
+          endGame();
+        }
+
+        // scoring
+        if (!pipe.counted && pipe.x + pipe.width < broom.x) {
+          pipe.counted = true;
+          score++;
+        }
+      });
+
+      pipes = pipes.filter(pipe => pipe.x + pipe.width > 0);
+
+      drawPipes();
+      drawBroom();
+
+      ctx.fillStyle = 'white';
+      ctx.font = '24px Papyrus';
+      ctx.fillText('Score: ' + score, 10, 30);
+
+      if (score >= 10) {
+        winGame();
+      }
+    }
+
+    function flap() {
+      velocity = flapStrength;
+    }
+
+    function startGame() {
+      resetGame();
+      startBtn.style.display = 'none';
+      winMsg.style.display = 'none';
+      document.addEventListener('keydown', flap);
+      document.addEventListener('click', flap);
+      gameInterval = setInterval(updateGame, 20);
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      startBtn.style.display = 'block';
+      document.removeEventListener('keydown', flap);
+      document.removeEventListener('click', flap);
+    }
+
+    function winGame() {
+      clearInterval(gameInterval);
+      winMsg.style.display = 'block';
+      document.removeEventListener('keydown', flap);
+      document.removeEventListener('click', flap);
+      setTimeout(() => {
+        startBtn.style.display = 'block';
+      }, 2000);
+    }
+
+    startBtn.addEventListener('click', startGame);
+  </script>
+</body>
+</html>
